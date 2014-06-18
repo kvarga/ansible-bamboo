@@ -9,7 +9,7 @@ description:
 version_added: ""
 author: Kyle Varga
 requirements:
-    - "requests Python Library"
+    - "None"
 options:
     state:
         description:
