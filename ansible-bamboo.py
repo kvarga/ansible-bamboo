@@ -1,0 +1,147 @@
+#!/usr/bin/python
+
+DOCUMENTATION = '''
+
+module: bamboo
+short_description: Pause/unpause Bamboo
+description:
+    - This module will let you pause/unpause Bamboo
+version_added: ""
+author: Kyle Varga
+requirements:
+    - "requests Python Library"
+options:
+    state:
+        description:
+            - Define whether or not the check should be running or paused.
+        required: true
+        default: null
+        choices: [ "RUNNING", "PAUSED" ]
+        aliases: []
+    url:
+        description:
+            - Bamboo URL of the check. https://bamboo.r.mutualmobile.com/rest/api/latest/server
+        required: true
+        default: null
+        choices: []
+        aliases: []
+    username:
+        description:
+            - Bamboo user name.
+        required: true
+        default: null
+        choices: []
+        aliases: []
+    passwd:
+        description:
+            - Bamboo user password.
+        required: true
+        default: null
+        choices: []
+        aliases: []
+notes:
+    - This module is under development
+'''
+
+EXAMPLES = '''
+# Pause the bamboo server
+- bamboo:  url=https://bamboo.r.mutualmobile.com/rest/api/latest/server
+           username=test
+           passwd=password123
+           state=PAUSED
+
+# Resume the bamboo server
+- bamboo:  url=https://bamboo.r.mutualmobile.com/rest/api/latest/server
+           username=test
+           passwd=password123
+           state=RUNNING
+'''
+
+import json
+import base64
+import time
+
+def pause(url, username, password):
+    api_url = url + "/rest/api/latest/server/pause"
+    auth = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
+    response, info = fetch_url(module, api_url, data=None, method="POST",
+                               headers={'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'Authorization': "Basic %s" % auth})
+
+    if info['status'] not in (200, 204):
+        module.fail_json(msg=info['msg'])
+        return False
+    # TODO: Add configurable waits / timeout options
+    while status(url, username, password) != 'PAUSED':
+        print 'Waiting..'
+        time.sleep(10)
+    return True
+
+
+def resume(url, username, password):
+    api_url = url + "rest/api/latest/server/resume"
+    auth = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
+    response, info = fetch_url(module, api_url, data=None, method="POST",
+                               headers={'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'Authorization': "Basic %s" % auth})
+
+    if info['status'] not in (200, 204):
+        module.fail_json(msg=info['msg'])
+        return False
+    return True
+
+def status(url, username, password):
+    api_url = url + "rest/api/latest/server"
+    auth = base64.encodestring('%s:%s' % (username, password)).replace('\n', '')
+    response, info = fetch_url(module, api_url, data=None, method="GET",
+                               headers={'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'Authorization': "Basic %s" % auth})
+
+    if info['status'] not in (200, 204):
+        module.fail_json(msg=info['msg'])
+        return None
+    body = response.read()
+    if body:
+        return json.loads(body)['state']
+    else:
+        module.fail_json(msg="Invalid Response from Bamboo")
+
+
+def main():
+    global module
+    module = AnsibleModule(
+        argument_spec=dict(
+            state=dict(required=True, choices=['RUNNING', 'PAUSED']),
+            url=dict(required=True),
+            username=dict(required=True),
+            passwd=dict(required=True)
+        )
+    )
+    state = module.params['state']
+    username = module.params['username']
+    passwd = module.params['passwd']
+    url = module.params['url']
+
+    current_state = status(url, username, passwd)
+
+    if current_state == state:
+        module.exit_json(changed=False)
+
+    if (state == "PAUSED"):
+        result = pause(url, username, passwd)
+
+    if (state == "RUNNING"):
+        result = resume(url, username, passwd)
+
+    if result is not True:
+        module.fail_json(msg="Bamboo Failed")
+
+    module.exit_json(changed=True)
+
+# import module snippets
+from ansible.module_utils.basic import *
+from ansible.module_utils.urls import *
+main()
