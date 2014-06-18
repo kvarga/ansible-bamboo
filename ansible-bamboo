@@ -20,7 +20,7 @@ options:
         aliases: []
     url:
         description:
-            - Bamboo URL of the check. https://bamboo.r.mutualmobile.com/rest/api/latest/server
+            - Bamboo URL of the check. https://bamboo.server.com
         required: true
         default: null
         choices: []
@@ -45,13 +45,13 @@ notes:
 
 EXAMPLES = '''
 # Pause the bamboo server
-- bamboo:  url=https://bamboo.r.mutualmobile.com/rest/api/latest/server
+- bamboo:  url=https://bamboo.server.com
            username=test
            passwd=password123
            state=PAUSED
 
 # Resume the bamboo server
-- bamboo:  url=https://bamboo.r.mutualmobile.com/rest/api/latest/server
+- bamboo:  url=https://bamboo.server.com
            username=test
            passwd=password123
            state=RUNNING
